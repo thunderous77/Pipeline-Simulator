@@ -1,0 +1,20 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/mnt/c/Sam/ACMOJ/PPCA/RISC-V/Pipeline-Simulator/CPU.hpp
+bits/stdc++.h
+-
+
+/mnt/c/Sam/ACMOJ/PPCA/RISC-V/Pipeline-Simulator/Execute.hpp
+CPU.hpp
+/mnt/c/Sam/ACMOJ/PPCA/RISC-V/Pipeline-Simulator/CPU.hpp
+
+/mnt/c/Sam/ACMOJ/PPCA/RISC-V/Pipeline-Simulator/main.cpp
+Execute.hpp
+/mnt/c/Sam/ACMOJ/PPCA/RISC-V/Pipeline-Simulator/Execute.hpp
+

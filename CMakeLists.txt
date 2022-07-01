@@ -3,4 +3,4 @@ project(Pipeline_Simulator)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(Pipeline_Simulator main.cpp CPU.hpp Execute.hpp)
+add_executable(code main.cpp CPU.hpp Execute.hpp)

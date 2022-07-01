@@ -111,17 +111,17 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named Pipeline_Simulator
+# Target rules for targets named code
 
 # Build rule for target.
-Pipeline_Simulator: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 Pipeline_Simulator
-.PHONY : Pipeline_Simulator
+code: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 code
+.PHONY : code
 
 # fast build rule for target.
-Pipeline_Simulator/fast:
-	$(MAKE) -f CMakeFiles/Pipeline_Simulator.dir/build.make CMakeFiles/Pipeline_Simulator.dir/build
-.PHONY : Pipeline_Simulator/fast
+code/fast:
+	$(MAKE) -f CMakeFiles/code.dir/build.make CMakeFiles/code.dir/build
+.PHONY : code/fast
 
 main.o: main.cpp.o
 
@@ -129,7 +129,7 @@ main.o: main.cpp.o
 
 # target to build an object file
 main.cpp.o:
-	$(MAKE) -f CMakeFiles/Pipeline_Simulator.dir/build.make CMakeFiles/Pipeline_Simulator.dir/main.cpp.o
+	$(MAKE) -f CMakeFiles/code.dir/build.make CMakeFiles/code.dir/main.cpp.o
 .PHONY : main.cpp.o
 
 main.i: main.cpp.i
@@ -138,7 +138,7 @@ main.i: main.cpp.i
 
 # target to preprocess a source file
 main.cpp.i:
-	$(MAKE) -f CMakeFiles/Pipeline_Simulator.dir/build.make CMakeFiles/Pipeline_Simulator.dir/main.cpp.i
+	$(MAKE) -f CMakeFiles/code.dir/build.make CMakeFiles/code.dir/main.cpp.i
 .PHONY : main.cpp.i
 
 main.s: main.cpp.s
@@ -147,7 +147,7 @@ main.s: main.cpp.s
 
 # target to generate assembly for a file
 main.cpp.s:
-	$(MAKE) -f CMakeFiles/Pipeline_Simulator.dir/build.make CMakeFiles/Pipeline_Simulator.dir/main.cpp.s
+	$(MAKE) -f CMakeFiles/code.dir/build.make CMakeFiles/code.dir/main.cpp.s
 .PHONY : main.cpp.s
 
 # Help Target
@@ -158,7 +158,7 @@ help:
 	@echo "... depend"
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
-	@echo "... Pipeline_Simulator"
+	@echo "... code"
 	@echo "... main.o"
 	@echo "... main.i"
 	@echo "... main.s"
