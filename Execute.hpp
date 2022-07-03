@@ -18,29 +18,16 @@ void CPU::AUIPC_EX() {
         tp[j] = 0;
     for (int j = 12; j < 32; ++j)
         tp[j] = EX.code[j];
-    offset = ten_trans(tp) << 2;
     int ans = ten_trans(tp) + (EX.pc << 2);
     for (int j = 0; j < 32; ++j)
         EX.pass[j] = ans >> j & 1;
     EX.reviseReg = true;
-    jump=true;
 }
 
 void CPU::JAL_EX() {
     for (int j = 0; j < 32; ++j)
         EX.pass[j] = ((EX.pc + 1) << 2) >> j & 1;
-    int tp[32];
-    tp[0] = 0;
-    for (int j = 1; j <= 10; ++j)
-        tp[j] = EX.code[j + 20];
-    tp[11] = EX.code[20];
-    for (int j = 12; j <= 19; ++j)
-        tp[j] = EX.code[j];
-    for (int j = 20; j < 32; ++j)
-        tp[j] = EX.code[31];
-    offset = ten_trans(tp) >> 2;
     EX.reviseReg = true;
-    jump=true;
 }
 
 void CPU::JALR_EX() {
@@ -51,106 +38,112 @@ void CPU::JALR_EX() {
         tp[j] = EX.code[j + 20];
     for (int j = 12; j < 32; ++j)
         tp[j] = EX.code[31];
-    offset = (((ten_trans(tp) + ten_trans(EX.regRs1)) & ~1) >> 2) - EX.pc;
+    bp[mp[EX.pc]].offset = (((ten_trans(tp) + ten_trans(EX.regRs1)) & ~1) >> 2) - EX.pc;
     EX.reviseReg = true;
-    jump=true;
+    revise = PredictionRevise::FORWARD;
 }
 
 void CPU::BEQ_EX() {
-    jump = (ten_trans(EX.regRs1) == ten_trans(EX.regRs2));
+    bool jump = (ten_trans(EX.regRs1) == ten_trans(EX.regRs2));
     if (jump) {
-        int tp[32];
-        tp[0] = 0;
-        for (int j = 1; j <= 4; ++j)
-            tp[j] = EX.code[j + 7];
-        for (int j = 5; j <= 10; ++j)
-            tp[j] = EX.code[j + 20];
-        tp[11] = EX.code[7];
-        for (int j = 12; j < 32; j++)
-            tp[j] = EX.code[31];
-        offset = ten_trans(tp) >> 2;
+        if (!bp[mp[EX.pc]].BranchJump()) {
+            revise = PredictionRevise::FORWARD;
+            bp[mp[EX.pc]].wrong++;
+        } else bp[mp[EX.pc]].right++;
+        bp[mp[EX.pc]]++;
+    } else {
+        if (bp[mp[EX.pc]].BranchJump()) {
+            revise = PredictionRevise::BACK;
+            bp[mp[EX.pc]].wrong++;
+        } else bp[mp[EX.pc]].right++;
+        bp[mp[EX.pc]]--;
     }
 }
 
 void CPU::BNE_EX() {
-    jump = (ten_trans(EX.regRs1) != ten_trans(EX.regRs2));
+    bool jump = (ten_trans(EX.regRs1) != ten_trans(EX.regRs2));
     if (jump) {
-        int tp[32];
-        tp[0] = 0;
-        for (int j = 1; j <= 4; ++j)
-            tp[j] = EX.code[j + 7];
-        for (int j = 5; j <= 10; ++j)
-            tp[j] = EX.code[j + 20];
-        tp[11] = EX.code[7];
-        for (int j = 12; j < 32; j++)
-            tp[j] = EX.code[31];
-        offset = ten_trans(tp) >> 2;
+        if (!bp[mp[EX.pc]].BranchJump()) {
+            revise = PredictionRevise::FORWARD;
+            bp[mp[EX.pc]].wrong++;
+        } else bp[mp[EX.pc]].right++;
+        bp[mp[EX.pc]]++;
+    } else {
+        if (bp[mp[EX.pc]].BranchJump()) {
+            revise = PredictionRevise::BACK;
+            bp[mp[EX.pc]].wrong++;
+        } else bp[mp[EX.pc]].right++;
+        bp[mp[EX.pc]]--;
     }
 }
 
 void CPU::BLT_EX() {
-    jump = (ten_trans(EX.regRs1) < ten_trans(EX.regRs2));
+    bool jump = (ten_trans(EX.regRs1) < ten_trans(EX.regRs2));
     if (jump) {
-        int tp[32];
-        tp[0] = 0;
-        for (int j = 1; j <= 4; ++j)
-            tp[j] = EX.code[j + 7];
-        for (int j = 5; j <= 10; ++j)
-            tp[j] = EX.code[j + 20];
-        tp[11] = EX.code[7];
-        for (int j = 12; j < 32; j++)
-            tp[j] = EX.code[31];
-        offset = ten_trans(tp) >> 2;
+        if (!bp[mp[EX.pc]].BranchJump()) {
+            revise = PredictionRevise::FORWARD;
+            bp[mp[EX.pc]].wrong++;
+        } else bp[mp[EX.pc]].right++;
+        bp[mp[EX.pc]]++;
+    } else {
+        if (bp[mp[EX.pc]].BranchJump()) {
+            revise = PredictionRevise::BACK;
+            bp[mp[EX.pc]].wrong++;
+        } else bp[mp[EX.pc]].right++;
+        bp[mp[EX.pc]]--;
     }
 }
 
 void CPU::BGE_EX() {
-    jump = (ten_trans(EX.regRs1) >= ten_trans(EX.regRs2));
+    bool jump = (ten_trans(EX.regRs1) >= ten_trans(EX.regRs2));
     if (jump) {
-        int tp[32];
-        tp[0] = 0;
-        for (int j = 1; j <= 4; ++j)
-            tp[j] = EX.code[j + 7];
-        for (int j = 5; j <= 10; ++j)
-            tp[j] = EX.code[j + 20];
-        tp[11] = EX.code[7];
-        for (int j = 12; j < 32; j++)
-            tp[j] = EX.code[31];
-        offset = ten_trans(tp) >> 2;
+        if (!bp[mp[EX.pc]].BranchJump()) {
+            revise = PredictionRevise::FORWARD;
+            bp[mp[EX.pc]].wrong++;
+        } else bp[mp[EX.pc]].right++;
+        bp[mp[EX.pc]]++;
+    } else {
+        if (bp[mp[EX.pc]].BranchJump()) {
+            revise = PredictionRevise::BACK;
+            bp[mp[EX.pc]].wrong++;
+        } else bp[mp[EX.pc]].right++;
+        bp[mp[EX.pc]]--;
     }
 }
 
 void CPU::BLTU_EX() {
     unsigned int a = tenU_trans(EX.regRs1), b = tenU_trans(EX.regRs2);
-    jump = (a < b);
+    bool jump = (a < b);
     if (jump) {
-        int tp[32];
-        tp[0] = 0;
-        for (int j = 1; j <= 4; ++j)
-            tp[j] = EX.code[j + 7];
-        for (int j = 5; j <= 10; ++j)
-            tp[j] = EX.code[j + 20];
-        tp[11] = EX.code[7];
-        for (int j = 12; j < 32; j++)
-            tp[j] = EX.code[31];
-        offset = ten_trans(tp) >> 2;
+        if (!bp[mp[EX.pc]].BranchJump()) {
+            revise = PredictionRevise::FORWARD;
+            bp[mp[EX.pc]].wrong++;
+        } else bp[mp[EX.pc]].right++;
+        bp[mp[EX.pc]]++;
+    } else {
+        if (bp[mp[EX.pc]].BranchJump()) {
+            revise = PredictionRevise::BACK;
+            bp[mp[EX.pc]].wrong++;
+        } else bp[mp[EX.pc]].right++;
+        bp[mp[EX.pc]]--;
     }
 }
 
 void CPU::BGEU_EX() {
     unsigned int a = tenU_trans(EX.regRs1), b = tenU_trans(EX.regRs2);
-    jump = (a >= b);
+    bool jump = (a >= b);
     if (jump) {
-        int tp[32];
-        tp[0] = 0;
-        for (int j = 1; j <= 4; ++j)
-            tp[j] = EX.code[j + 7];
-        for (int j = 5; j <= 10; ++j)
-            tp[j] = EX.code[j + 20];
-        tp[11] = EX.code[7];
-        for (int j = 12; j < 32; j++)
-            tp[j] = EX.code[31];
-        offset = ten_trans(tp) >> 2;
+        if (!bp[mp[EX.pc]].BranchJump()) {
+            revise = PredictionRevise::FORWARD;
+            bp[mp[EX.pc]].wrong++;
+        } else bp[mp[EX.pc]].right++;
+        bp[mp[EX.pc]]++;
+    } else {
+        if (bp[mp[EX.pc]].BranchJump()) {
+            revise = PredictionRevise::BACK;
+            bp[mp[EX.pc]].wrong++;
+        } else bp[mp[EX.pc]].right++;
+        bp[mp[EX.pc]]--;
     }
 }
 

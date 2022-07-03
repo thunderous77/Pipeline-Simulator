@@ -6,7 +6,6 @@
 #define PIPELINE_SIMULATOR_CPU_HPP
 
 #include <bits/stdc++.h>
-//#include "Execute.hpp"
 
 using namespace std;
 enum Itype {
@@ -14,10 +13,14 @@ enum Itype {
     ORI, ANDI, SLLI, SRLI, SRAI, ADD, SUB, SLL, SLT, SLTU, XOR, SRL, SRA, OR, AND
 };
 
+enum PredictionRevise {
+    FORWARD, BACK, NONE
+};
+
 class CPU {
 private:
-    int Register[100][32], Memory[10000000], pc = 0, clock = 0, offset;
-    bool jump;//jump表示条件判断跳转语句是否执行
+    int Register[100][32], Memory[10000000], pc = 0, clock = 0, bpcnt = 0;
+    PredictionRevise revise = NONE;//jump表示条件判断跳转语句是否执行
 
     class tmpReg {
     public:
@@ -47,6 +50,25 @@ private:
         }
     };
 
+    class BranchPrediction {
+    public:
+        int state = 0, offset = 0, right = 0, wrong = 0;//[0,3]
+        void operator++(int i) {
+            if (state < 3) state++;
+        }
+
+        void operator--(int i) {
+            if (state > 0) state--;
+        }
+
+        bool BranchJump() {
+            return (state >= 2);
+        }
+    };
+
+    BranchPrediction bp[10000];//1-base
+    map<int, int> mp;
+
     tmpReg IF, ID, EX, MEM, WB;
 
     bool Exit(int *code) {
@@ -70,6 +92,25 @@ private:
 
     bool IsLoad(tmpReg tmp) {
         return (tmp.type == LB || tmp.type == LH || tmp.type == LW || tmp.type == LBU || tmp.type == LHU);
+    }
+
+    bool IsBp() {
+        return (ID.type == BEQ || ID.type == BNE || ID.type == BLT || ID.type == BGE || ID.type == BLTU ||
+                ID.type == BGEU);
+    }
+
+    int jumpOffset() {
+        int tp[32], ans;
+        tp[0] = 0;
+        for (int j = 1; j <= 4; ++j)
+            tp[j] = ID.code[j + 7];
+        for (int j = 5; j <= 10; ++j)
+            tp[j] = ID.code[j + 20];
+        tp[11] = ID.code[7];
+        for (int j = 12; j < 32; j++)
+            tp[j] = ID.code[31];
+        ans = ten_trans(tp) >> 2;
+        return ans;
     }
 
     int ten_trans(int *a) {
@@ -353,12 +394,47 @@ public:
                     ID.type = SRA;
             }
         }
+        //无条件跳转
+        int offset;
+        if (ID.type == AUIPC) {
+            int tp[32];
+            for (int j = 0; j < 12; ++j)
+                tp[j] = 0;
+            for (int j = 12; j < 32; ++j)
+                tp[j] = ID.code[j];
+            offset = ten_trans(tp) << 2;
+            pc = pc - 1 + offset;
+        } else if (ID.type == JAL) {
+            int tp[32];
+            tp[0] = 0;
+            for (int j = 1; j <= 10; ++j)
+                tp[j] = ID.code[j + 20];
+            tp[11] = ID.code[20];
+            for (int j = 12; j <= 19; ++j)
+                tp[j] = ID.code[j];
+            for (int j = 20; j < 32; ++j)
+                tp[j] = ID.code[31];
+            offset = ten_trans(tp) >> 2;
+            pc = pc - 1 + offset;
+        } else if (ID.type == JALR) {//JALR一定预测不跳转，之后一定revise，由于需要调用寄存器所以不能在ID阶段完成
+            if (mp.count(ID.pc) == 0)
+                mp[ID.pc] = ++bpcnt;
+        }
+        //分支预测
+        if (IsBp()) {
+            if (mp.count(ID.pc) == 0) {
+                mp[ID.pc] = ++bpcnt;
+                bp[bpcnt].offset = jumpOffset();
+            }
+            if (bp[mp[ID.pc]].BranchJump()) {
+                pc = pc - 1 + bp[mp[ID.pc]].offset;
+            }
+        }
     }
 
     void Execute() {
         if (!EX.useful) return;
-        offset = 0;
-        jump = false;
+        revise = NONE;
         EX.reviseReg = false;
         switch (EX.type) {
             case LUI:
@@ -577,13 +653,13 @@ public:
     void run() {
         int forward;
         while (!Exit(MEM.code)) {
-//            if (WB.useful) {
-//                printf("%04X", WB.pc << 2);
-//                cout << endl;
-//            }
 //            cout << "clock: " << clock << "\n";
             clock++;
             forward = DataForwarding();
+//            if (WB.useful) {
+//                printf("%04X", pc << 2);
+//                cout << endl;
+//            }
             if (forward > 0) {//stall
                 clock += 3;
                 WB = MEM;
@@ -600,8 +676,13 @@ public:
                 EX = ID;
                 ID = IF;
                 Execute();
-                if (jump) {
-                    pc = pc - 2 + offset;
+                if (revise == FORWARD) {
+                    pc = pc - 2 + bp[mp[EX.pc]].offset;
+                    InstructionFetch();
+                    clock++;
+                    ID = IF;
+                } else if (revise == BACK) {
+                    pc = pc - bp[mp[EX.pc]].offset;
                     InstructionFetch();
                     clock++;
                     ID = IF;
@@ -614,8 +695,13 @@ public:
                 WriteBack();
                 MemoryAccess();
                 Execute();
-                if (jump) {
-                    pc = pc - 2 + offset;
+                if (revise == FORWARD) {
+                    pc = pc - 2 + bp[mp[EX.pc]].offset;
+                    InstructionFetch();
+                    clock++;
+                    ID = IF;
+                } else if (revise == BACK) {//一方面此时IF未执行，+1；另一方面目标是原来的pc+1，再+1，于是-2就没了
+                    pc = pc - bp[mp[EX.pc]].offset;
                     InstructionFetch();
                     clock++;
                     ID = IF;
@@ -630,6 +716,13 @@ public:
         }
         int tmp = tenU_trans(Register[10]) & 255u;
         cout << tmp << "\n";
+//        int rightSum = 0, wrongSum = 0;
+//        for (int i = 1; i <= bpcnt; ++i) {
+//            rightSum += bp[i].right;
+//            wrongSum += bp[i].wrong;
+//        }
+//        if (rightSum + wrongSum == 0) cout << "No BranchPrediction\n";
+//        else cout << (rightSum * 100) / (rightSum + wrongSum) << "\n";
     }
 };
 
